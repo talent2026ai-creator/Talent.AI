@@ -601,22 +601,29 @@ export default function App() {
     <ErrorBoundary>
       <div className="min-h-screen bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0]">
       {/* Navigation */}
-      <nav className="border-b border-[#141414] px-6 py-4 flex justify-between items-center bg-[#E4E3E0] sticky top-0 z-50 no-print">
-        <div 
-          className="flex items-center gap-2 cursor-pointer" 
-          onClick={() => setView('landing')}
-        >
-          <div className="w-8 h-8 bg-[#141414] rounded-sm flex items-center justify-center">
-            <Briefcase className="text-[#E4E3E0] w-5 h-5" />
+      <nav className="border-b border-[#141414] px-4 md:px-6 py-4 flex flex-col md:flex-row justify-between items-center bg-[#E4E3E0] sticky top-0 z-50 no-print gap-4 md:gap-0">
+        <div className="flex justify-between items-center w-full md:w-auto">
+          <div 
+            className="flex items-center gap-2 cursor-pointer" 
+            onClick={() => setView('landing')}
+          >
+            <div className="w-8 h-8 bg-[#141414] rounded-sm flex items-center justify-center">
+              <Briefcase className="text-[#E4E3E0] w-5 h-5" />
+            </div>
+            <span className="font-bold tracking-tighter text-xl">TALENT.AI</span>
           </div>
-          <span className="font-bold tracking-tighter text-xl">TALENT.AI</span>
+          
+          <div className="md:hidden flex items-center gap-2">
+            {user && (
+              <button 
+                onClick={handleSignOut}
+                className="hover:bg-[#141414] hover:text-[#E4E3E0] transition-all border border-[#141414] px-2 py-1 text-[8px] font-bold uppercase"
+              >
+                Logout
+              </button>
+            )}
+          </div>
         </div>
-        
-        {(!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) && (
-          <div className="bg-amber-100 text-amber-800 px-4 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-amber-200">
-            Supabase Keys Missing
-          </div>
-        )}
         
         <AnimatePresence>
           {successMessage && (
@@ -624,10 +631,10 @@ export default function App() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="absolute left-1/2 -translate-x-1/2 top-20 bg-emerald-600 text-white px-6 py-3 rounded-full shadow-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 z-[60]"
+              className="fixed md:absolute left-1/2 -translate-x-1/2 top-24 md:top-20 bg-emerald-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-full shadow-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center gap-2 z-[60] w-[90%] md:w-auto justify-center"
             >
-              <CheckCircle size={16} /> {successMessage}
-              <button onClick={() => setSuccessMessage(null)} className="ml-4 opacity-50 hover:opacity-100">×</button>
+              <CheckCircle size={14} /> {successMessage}
+              <button onClick={() => setSuccessMessage(null)} className="ml-2 md:ml-4 opacity-50 hover:opacity-100">×</button>
             </motion.div>
           )}
           {errorMessage && (
@@ -635,21 +642,21 @@ export default function App() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="absolute left-1/2 -translate-x-1/2 top-20 bg-red-600 text-white px-6 py-3 rounded-full shadow-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 z-[60]"
+              className="fixed md:absolute left-1/2 -translate-x-1/2 top-24 md:top-20 bg-red-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-full shadow-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center gap-2 z-[60] w-[90%] md:w-auto justify-center"
             >
-              <AlertCircle size={16} /> {errorMessage}
-              <button onClick={() => setErrorMessage(null)} className="ml-4 opacity-50 hover:opacity-100">×</button>
+              <AlertCircle size={14} /> {errorMessage}
+              <button onClick={() => setErrorMessage(null)} className="ml-2 md:ml-4 opacity-50 hover:opacity-100">×</button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="flex items-center gap-8">
+        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 w-full md:w-auto">
           {/* Role Switcher Tabs */}
-          <div className="flex bg-[#F5F5F3] border border-[#141414] p-1 rounded-sm">
+          <div className="flex bg-[#F5F5F3] border border-[#141414] p-1 rounded-sm w-full md:w-auto">
             <button 
               onClick={() => setView('recruiter')}
               className={cn(
-                "px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all",
+                "flex-1 md:flex-none px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all",
                 view === 'recruiter' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-[#141414]/5"
               )}
             >
@@ -658,7 +665,7 @@ export default function App() {
             <button 
               onClick={() => setView('candidate')}
               className={cn(
-                "px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all",
+                "flex-1 md:flex-none px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all",
                 view === 'candidate' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-[#141414]/5"
               )}
             >
@@ -666,7 +673,7 @@ export default function App() {
             </button>
           </div>
 
-          <div className="flex gap-6 text-xs font-bold uppercase tracking-widest items-center">
+          <div className="hidden md:flex gap-6 text-xs font-bold uppercase tracking-widest items-center">
             {user ? (
               <>
                 {profile?.is_admin && (
@@ -700,7 +707,7 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
         <AnimatePresence mode="wait">
           {(!user && !isAuthLoading) ? (
             <motion.div
@@ -708,7 +715,7 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="max-w-md mx-auto mt-20 p-8 bg-white border border-[#141414] shadow-[8px_8px_0px_0px_rgba(20,20,20,1)]"
+              className="max-w-md mx-auto mt-8 md:mt-20 p-6 md:p-8 bg-white border border-[#141414] shadow-[4px_4px_0px_0px_rgba(20,20,20,1)] md:shadow-[8px_8px_0px_0px_rgba(20,20,20,1)]"
             >
               <h2 className="text-3xl font-bold tracking-tighter mb-6 uppercase">
                 {isSignUp ? 'Create Account' : `${view === 'candidate' ? 'Candidate' : 'Recruiter'} Login`}
@@ -1144,7 +1151,7 @@ export default function App() {
               </div>
 
               <div 
-                className="border-2 border-dashed border-[#141414] p-12 text-center space-y-6 bg-white cursor-pointer hover:bg-[#F5F5F3] transition-colors"
+                className="border-2 border-dashed border-[#141414] p-6 md:p-12 text-center space-y-4 md:space-y-6 bg-white cursor-pointer hover:bg-[#F5F5F3] transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <input 
