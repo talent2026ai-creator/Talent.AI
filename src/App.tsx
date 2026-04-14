@@ -956,8 +956,8 @@ export default function App() {
                     >
                       {isMatching ? <Loader2 className="animate-spin" size={16} /> : <Search size={16} />}
                       {candidates.length === 0 ? "Upload CVs First" : 
-                       !jobDescription.trim() ? "Enter Job Description" : 
-                       credits.scansUsed >= credits.scansTotal ? "Out of Credits" : "Run AI Matching"}
+                       !jobDescription.trim() ? "Enter Job Description to Rank" : 
+                       credits.scansUsed >= credits.scansTotal ? "Out of Credits" : "Rank Candidates"}
                     </button>
                     {credits.scansUsed < credits.scansTotal && candidates.length > 0 && (
                       <p className="text-[8px] uppercase font-bold opacity-40 mt-2 text-center">
@@ -1046,7 +1046,7 @@ export default function App() {
                             >
                               <Trash2 size={16} />
                             </button>
-                            {candidate.match && (
+                            {candidate.match && jobDescription.trim() !== '' && (
                               <div className="text-right">
                                 <div className="text-3xl font-bold tracking-tighter">{candidate.match.score}%</div>
                                 <div className="text-[10px] font-bold uppercase tracking-widest opacity-50">Match Score</div>
@@ -1223,7 +1223,7 @@ export default function App() {
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <div className="px-3 py-1 bg-[#141414] text-[#E4E3E0] text-[10px] font-bold uppercase tracking-widest">
-                            {c.match_score ? `Match: ${c.match_score}%` : 'Profile'}
+                            {c.match_score && jobDescription.trim() !== '' ? `Match: ${c.match_score}%` : 'Profile'}
                           </div>
                           <button 
                             onClick={() => {
