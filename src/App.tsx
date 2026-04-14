@@ -120,6 +120,7 @@ export default function App() {
   const [jobDescription, setJobDescription] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanningProgress, setScanningProgress] = useState({ current: 0, total: 0, status: '' });
+  const [fileProgress, setFileProgress] = useState<{ [fileName: string]: string }>({});
   const [isMatching, setIsMatching] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [isGeneratingContract, setIsGeneratingContract] = useState(false);
@@ -391,76 +392,95 @@ export default function App() {
     if (!files || files.length === 0) return;
 
     setIsScanning(true);
-    setScanningProgress({ current: 0, total: files.length, status: 'Starting...' });
+    setScanningProgress({ current: 0, total: files.length, status: 'Starting batch processing...' });
     setSuccessMessage(null);
-    const newCandidates: CandidateWithMatch[] = [];
+    setFileProgress({});
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      setScanningProgress(prev => ({ ...prev, current: i + 1, status: `Processing ${file.name}...` }));
-      
-      const isWordDoc = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
-                        file.name.endsWith('.docx');
-      
-      const reader = new FileReader();
-      
-      const filePromise = new Promise<void>((resolve) => {
-        reader.onload = async (e) => {
-          try {
-            let scanData: string;
-            let isRawText = false;
-
-            setScanningProgress(prev => ({ ...prev, status: `Extracting text from ${file.name}...` }));
-            if (isWordDoc) {
-              const arrayBuffer = e.target?.result as ArrayBuffer;
-              const result = await mammoth.extractRawText({ arrayBuffer });
-              scanData = result.value;
-              isRawText = true;
-            } else if (file.type === 'application/pdf') {
-              const arrayBuffer = e.target?.result as ArrayBuffer;
-              scanData = await extractTextFromPDF(arrayBuffer);
-              isRawText = true;
-            } else {
-              scanData = e.target?.result as string;
-            }
-
-            setScanningProgress(prev => ({ ...prev, status: `AI Analysis for ${file.name}...` }));
-            const { profile, match } = await scanCV(scanData, file.type, jobDescription, isRawText);
-            let isSynced = false;
-            
-            let finalProfile = { ...profile };
+    // Create an array of file processing promises for parallel processing
+    const filePromises = Array.from(files).map(async (file) => {
+      try {
+        const fileName = file.name;
+        
+        // Update file-specific progress
+        setFileProgress(prev => ({ ...prev, [fileName]: 'Extracting text...' }));
+        
+        const isWordDoc = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+                          file.name.endsWith('.docx');
+        
+        // Read file content
+        const fileData = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
             try {
-              setScanningProgress(prev => ({ ...prev, status: `Saving ${profile.full_name} to database...` }));
-              const dbData = await saveCandidateToFirestore(profile, match?.score || 0, user?.email || undefined);
-              if (dbData && dbData.length > 0) {
-                finalProfile.id = dbData[0].id.toString();
+              let scanData: string;
+              let isRawText = false;
+
+              if (isWordDoc) {
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                scanData = result.value;
+                isRawText = true;
+              } else if (file.type === 'application/pdf') {
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                scanData = await extractTextFromPDF(arrayBuffer);
+                isRawText = true;
+              } else {
+                scanData = e.target?.result as string;
               }
-              isSynced = true;
-            } catch (dbError: any) {
-              console.error("Firestore save failed:", dbError);
+              resolve(scanData);
+            } catch (error) {
+              reject(error);
             }
-
-            const candidate: CandidateWithMatch = { ...finalProfile, match, isSynced };
-            newCandidates.push(candidate);
-          } catch (error) {
-            console.error("Error scanning CV:", error);
-            setErrorMessage(`Error scanning ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          };
+          reader.onerror = () => reject(new Error('File read failed'));
+          
+          if (isWordDoc || file.type === 'application/pdf') {
+            reader.readAsArrayBuffer(file);
+          } else {
+            reader.readAsDataURL(file);
           }
-          resolve();
-        };
-      });
-      
-      if (isWordDoc || file.type === 'application/pdf') {
-        reader.readAsArrayBuffer(file);
-      } else {
-        reader.readAsDataURL(file);
-      }
-      await filePromise;
-    }
+        });
 
-    setCandidates(prev => [...prev, ...newCandidates]);
+        // Update progress: AI Analysis
+        setFileProgress(prev => ({ ...prev, [fileName]: 'Running AI analysis...' }));
+        const { profile, match } = await scanCV(fileData, file.type, jobDescription, true);
+        
+        // Update progress: Saving to database
+        setFileProgress(prev => ({ ...prev, [fileName]: 'Saving to database...' }));
+        let isSynced = false;
+        let finalProfile = { ...profile };
+        
+        try {
+          const dbData = await saveCandidateToFirestore(profile, match?.score || 0, user?.email || undefined);
+          if (dbData && dbData.length > 0) {
+            finalProfile.id = dbData[0].id.toString();
+          }
+          isSynced = true;
+        } catch (dbError: any) {
+          console.error("Firestore save failed:", dbError);
+        }
+
+        // Mark as complete
+        setFileProgress(prev => ({ ...prev, [fileName]: 'Complete ✓' }));
+        
+        const candidate: CandidateWithMatch = { ...finalProfile, match, isSynced };
+        return candidate;
+      } catch (error) {
+        console.error("Error scanning CV:", error);
+        setErrorMessage(`Error scanning ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setFileProgress(prev => ({ ...prev, [file.name]: 'Error ✗' }));
+        return null;
+      }
+    });
+
+    // Process all files in parallel and collect results
+    const results = await Promise.all(filePromises);
+    const validCandidates = results.filter((c) => c !== null) as CandidateWithMatch[];
+    
+    setCandidates(prev => [...prev, ...validCandidates]);
     setIsScanning(false);
     setScanningProgress({ current: 0, total: 0, status: '' });
+    setFileProgress({});
     if (view === 'landing') setView('recruiter');
   };
 
@@ -975,27 +995,49 @@ export default function App() {
                   </h3>
                   
                   {isScanning && (
-                    <div className="p-12 border border-dashed border-[#141414] flex flex-col items-center justify-center gap-4 bg-white/50">
-                      <Loader2 className="animate-spin text-[#141414]" size={32} />
-                      <div className="text-center space-y-2">
-                        <p className="font-bold uppercase tracking-widest text-xs">Scanning CVs...</p>
-                        {scanningProgress.total > 0 && (
+                    <div className="p-6 border border-dashed border-[#141414] flex flex-col gap-4 bg-white/50">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="animate-spin text-[#141414]" size={24} />
+                        <p className="font-bold uppercase tracking-widest text-xs">Batch Processing in Progress</p>
+                      </div>
+                      
+                      {scanningProgress.total > 0 && (
+                        <div className="space-y-3">
+                          {/* Overall Progress Bar */}
                           <div className="space-y-1">
-                            <p className="text-[10px] font-mono opacity-60">
-                              File {scanningProgress.current} of {scanningProgress.total}
-                            </p>
-                            <p className="text-[10px] font-bold text-emerald-600 animate-pulse uppercase tracking-tighter">
-                              {scanningProgress.status}
-                            </p>
-                            <div className="w-48 h-1 bg-[#141414]/10 mx-auto mt-2">
+                            <div className="flex justify-between items-center">
+                              <p className="text-[10px] font-mono opacity-60">
+                                {Object.values(fileProgress).filter(s => s === 'Complete ✓').length} of {scanningProgress.total} completed
+                              </p>
+                              <p className="text-[10px] font-bold opacity-60">
+                                {Math.round((Object.values(fileProgress).filter(s => s === 'Complete ✓').length / scanningProgress.total) * 100)}%
+                              </p>
+                            </div>
+                            <div className="w-full h-2 bg-[#141414]/10 rounded">
                               <div 
-                                className="h-full bg-[#141414] transition-all duration-500" 
-                                style={{ width: `${(scanningProgress.current / scanningProgress.total) * 100}%` }}
+                                className="h-full bg-[#141414] transition-all duration-300 rounded" 
+                                style={{ width: `${(Object.values(fileProgress).filter(s => s === 'Complete ✓').length / scanningProgress.total) * 100}%` }}
                               />
                             </div>
                           </div>
-                        )}
-                      </div>
+                          
+                          {/* Individual File Status List */}
+                          <div className="max-h-48 overflow-y-auto space-y-2 border border-[#141414]/20 p-3 bg-white rounded">
+                            {Object.entries(fileProgress).map(([fileName, status]) => (
+                              <div key={fileName} className="flex items-center justify-between text-[10px] font-mono">
+                                <span className="truncate flex-1 mr-2 opacity-70">{fileName}</span>
+                                <span className={`whitespace-nowrap ${
+                                  status === 'Complete ✓' ? 'text-emerald-600 font-bold' :
+                                  status === 'Error ✗' ? 'text-red-600 font-bold' :
+                                  'text-blue-600 animate-pulse'
+                                }`}>
+                                  {status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
