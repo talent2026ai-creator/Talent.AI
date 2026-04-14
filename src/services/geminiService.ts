@@ -89,6 +89,7 @@ export interface CandidateProfile {
   languages?: string[];
   summary: string;
   match_score?: number;
+  profile_strength_score?: number;
 }
 
 export interface MatchResult {
@@ -151,6 +152,7 @@ export const scanCV = async (fileData: string, mimeType: string, jobDescription?
     - languages (array)
     - summary
     ${jobDescription ? `- match_score (0-100 based on fit to: "${jobDescription}")` : ''}
+    ${!jobDescription ? `- profile_strength_score (0-100 based on overall profile completeness, experience depth, and skill density)` : ''}
     
     IMPORTANT: Return ONLY the JSON. No markdown, no preamble.`;
 
@@ -196,6 +198,10 @@ export const scanCV = async (fileData: string, mimeType: string, jobDescription?
       gaps: [],
       reasoning: "Extracted during initial scan"
     } : undefined;
+
+    if (!jobDescription && result.profile_strength_score !== undefined) {
+      profile.profile_strength_score = Math.min(100, Math.max(0, result.profile_strength_score));
+    }
 
     return { profile, match };
   } catch (error: any) {
@@ -246,6 +252,7 @@ export const saveCandidateToFirestore = async (profile: CandidateProfile, matchS
       languages: profile.languages || [],
       summary: profile.summary,
       match_score: matchScore,
+      profile_strength_score: profile.profile_strength_score || null,
       created_by: createdByEmail || null,
       created_at: serverTimestamp()
     };
@@ -276,7 +283,8 @@ export const getCandidatesFromFirestore = async (): Promise<CandidateProfile[]> 
         certifications: data.certifications || [],
         languages: data.languages || [],
         summary: data.summary || "",
-        match_score: data.match_score
+        match_score: data.match_score,
+        profile_strength_score: data.profile_strength_score
       };
     });
   } catch (error) {
@@ -306,6 +314,7 @@ export const getCandidatesByCreatedBy = async (email: string): Promise<Candidate
         languages: data.languages || [],
         summary: data.summary || "",
         match_score: data.match_score,
+        profile_strength_score: data.profile_strength_score,
         created_by: data.created_by
       };
     });

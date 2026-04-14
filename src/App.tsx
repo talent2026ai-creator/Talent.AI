@@ -108,6 +108,7 @@ type View = 'landing' | 'recruiter' | 'candidate' | 'contract' | 'admin';
 
 interface CandidateWithMatch extends CandidateProfile {
   match?: MatchResult;
+  profile_strength_score?: number;
   isHired?: boolean;
   contract?: string;
   isSynced?: boolean;
@@ -1046,12 +1047,17 @@ export default function App() {
                             >
                               <Trash2 size={16} />
                             </button>
-                            {candidate.match && jobDescription.trim() !== '' && (
+                            {(candidate.match && jobDescription.trim() !== '') ? (
                               <div className="text-right">
                                 <div className="text-3xl font-bold tracking-tighter">{candidate.match.score}%</div>
                                 <div className="text-[10px] font-bold uppercase tracking-widest opacity-50">Match Score</div>
                               </div>
-                            )}
+                            ) : (candidate.profile_strength_score !== undefined && jobDescription.trim() === '') ? (
+                              <div className="text-right">
+                                <div className="text-3xl font-bold tracking-tighter">{candidate.profile_strength_score}%</div>
+                                <div className="text-[10px] font-bold uppercase tracking-widest opacity-50">Profile Strength</div>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
 
@@ -1223,7 +1229,7 @@ export default function App() {
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <div className="px-3 py-1 bg-[#141414] text-[#E4E3E0] text-[10px] font-bold uppercase tracking-widest">
-                            {c.match_score && jobDescription.trim() !== '' ? `Match: ${c.match_score}%` : 'Profile'}
+                            {(c.match_score && jobDescription.trim() !== '') ? `Match: ${c.match_score}%` : (c.profile_strength_score !== undefined && jobDescription.trim() === '') ? `Strength: ${c.profile_strength_score}%` : 'Profile'}
                           </div>
                           <button 
                             onClick={() => {
