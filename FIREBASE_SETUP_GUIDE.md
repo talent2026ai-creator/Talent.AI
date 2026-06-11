@@ -103,7 +103,8 @@ Open your browser's Developer Tools (F12) and check the **Console** tab for:
 | "Failed to get document" | Authentication/permission denied | Verify Firebase rules and authentication setup |
 | "VITE_FIREBASE_* is undefined" | Environment variables not loaded | Create `.env` file and restart dev server |
 | "CORS error" | Browser blocking Firebase requests | Check Firebase security rules and allowed domains |
-| "Permission denied" | User doesn't have access to collection | Update Firestore security rules |
+| "Permission denied" | User doesn't have access to collection | Update Firestore security rules to include allow list |
+| "MISSING OR INSUFFICIENT PERMISSIONS" | Missing list permission in Firestore rules | Add allow list: if isAuthenticated(); to collection rules |
 
 ## Authentication Setup
 
