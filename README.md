@@ -19,3 +19,17 @@ View your app in AI Studio: https://ai.studio/apps/26e0084c-3cc2-4c0f-abc3-9777c
 3. Run the app:
    `npm run dev`
    
+
+## Troubleshooting Gemini API 403 Errors
+
+If you encounter a `PERMISSION_DENIED` (403) error when scanning CVs with the message about "temporary service disruptions" and "unrestricted keys," you must restrict your Gemini API key in the Google Cloud Console.
+
+### How to Fix:
+1. Go to the [Google Cloud Console Credentials page](https://console.cloud.google.com/apis/credentials).
+2. Find the API key you are using for `VITE_GEMINI_API_KEY`.
+3. Click on the key name to edit its settings.
+4. Under **API restrictions**, select **Restrict key**.
+5. From the dropdown, search for and select **Generative Language API**.
+6. Click **Save**.
+
+*Note: It may take up to a few hours for these changes to propagate across Google's servers.*

@@ -188,3 +188,17 @@ When deploying via GitHub Actions, add these secrets to your repository:
 3. Ensure your Firebase project is active and not deleted
 4. Check your internet connection
 5. Try clearing browser cache and restarting the dev server
+
+## Gemini API Key Restriction (403 Forbidden)
+
+If you see an error like:
+`"message":"You are experiencing temporary service disruptions since you are accessing Gemini API with one or more unrestricted keys..."`
+
+Google now requires Gemini API keys to be restricted to specific APIs for security.
+
+### Required Action:
+1. Navigate to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials).
+2. Edit your Gemini API key.
+3. Change **API restrictions** to **Restrict key**.
+4. Select **Generative Language API** from the list.
+5. Save the changes.
